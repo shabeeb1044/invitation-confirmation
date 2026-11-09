@@ -29,6 +29,7 @@ import {
   AlertCircle,
   Trash2,
   RotateCcw,
+  X,
 } from 'lucide-react';
 
 interface AdminDashboardProps {
