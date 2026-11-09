@@ -73,15 +73,11 @@ export default async function handler(req, res) {
         .select('id')
         .single();
 
-      // Graceful fallback retry if any newly added columns do not exist in SQL schema yet
+      // Retry only for optional guest/email columns — never drop organisation
       while (insertResult.error && insertResult.error.message) {
         let changed = false;
         if (insertResult.error.message.includes('guests')) {
           delete payloadData.guests;
-          changed = true;
-        }
-        if (insertResult.error.message.includes('organisation')) {
-          delete payloadData.organisation;
           changed = true;
         }
         if (insertResult.error.message.includes('has_guest') || insertResult.error.message.includes('guest_count')) {

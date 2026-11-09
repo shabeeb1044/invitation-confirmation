@@ -12,13 +12,6 @@ import {
 import { exportToCSV, exportToExcel } from '../utils/export';
 import { PrintRecordModal } from './PrintRecordModal';
 import {
-  getOrganisations,
-  addOrganisation,
-  updateOrganisation,
-  deleteOrganisation,
-  resetDemoOrganisations,
-} from '../services/organisations';
-import {
   Search,
   ArrowUpDown,
   ArrowUp,
@@ -35,11 +28,7 @@ import {
   KeyRound,
   AlertCircle,
   Trash2,
-  Building2,
-  Plus,
   RotateCcw,
-  Check,
-  X,
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -62,102 +51,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentLang }) =
   const [loadingData, setLoadingData] = useState(true);
   const [dataError, setDataError] = useState('');
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
-
-  // Active Tab: Submissions or Dynamic Organisation Management
-  const [activeTab, setActiveTab] = useState<'submissions' | 'organisations'>('submissions');
-
-  // Organisations Management State
-  const [organisations, setOrganisations] = useState<string[]>(() => getOrganisations());
-  const [newOrgName, setNewOrgName] = useState('');
-  const [orgSearch, setOrgSearch] = useState('');
-  const [orgFeedback, setOrgFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-
-  // Sync organisations if updated elsewhere
-  useEffect(() => {
-    const handleUpdate = () => {
-      setOrganisations(getOrganisations());
-    };
-    window.addEventListener('organisations-updated', handleUpdate);
-    window.addEventListener('storage', handleUpdate);
-    return () => {
-      window.removeEventListener('organisations-updated', handleUpdate);
-      window.removeEventListener('storage', handleUpdate);
-    };
-  }, []);
-
-  const handleAddOrg = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newOrgName.trim()) return;
-    const res = addOrganisation(newOrgName);
-    if (res.success) {
-      setOrganisations(res.list);
-      setNewOrgName('');
-      setOrgFeedback({ type: 'success', message: `Added "${newOrgName.trim()}" successfully!` });
-      setTimeout(() => setOrgFeedback(null), 3000);
-    } else {
-      setOrgFeedback({ type: 'error', message: res.error || 'Failed to add organisation.' });
-      setTimeout(() => setOrgFeedback(null), 4000);
-    }
-  };
-
-  // Inline Organisation Editing
-  const [editingOrg, setEditingOrg] = useState<string | null>(null);
-  const [editingOrgValue, setEditingOrgValue] = useState('');
-
-  const handleStartEditOrg = (org: string) => {
-    setEditingOrg(org);
-    setEditingOrgValue(org);
-  };
-
-  const handleCancelEditOrg = () => {
-    setEditingOrg(null);
-    setEditingOrgValue('');
-  };
-
-  const handleSaveEditOrg = (oldName: string) => {
-    const trimmed = editingOrgValue.trim();
-    if (!trimmed) {
-      setOrgFeedback({ type: 'error', message: 'Organisation name cannot be empty.' });
-      return;
-    }
-    const res = updateOrganisation(oldName, trimmed);
-    if (res.success) {
-      setOrganisations(res.list);
-      setEditingOrg(null);
-      setEditingOrgValue('');
-      setOrgFeedback({ type: 'success', message: `Updated to "${trimmed}" successfully!` });
-      setTimeout(() => setOrgFeedback(null), 3000);
-    } else {
-      setOrgFeedback({ type: 'error', message: res.error || 'Failed to update organisation.' });
-      setTimeout(() => setOrgFeedback(null), 4000);
-    }
-  };
-
-  const handleDeleteOrg = (org: string) => {
-    if (window.confirm(`${t.deleteOrganisationConfirm}\n"${org}"`)) {
-      if (editingOrg === org) {
-        setEditingOrg(null);
-        setEditingOrgValue('');
-      }
-      const updated = deleteOrganisation(org);
-      setOrganisations(updated);
-    }
-  };
-
-  const handleResetDemoOrgs = () => {
-    if (window.confirm('Reset the list to the default 20 demo organisations?')) {
-      const updated = resetDemoOrganisations();
-      setOrganisations(updated);
-      setOrgFeedback({ type: 'success', message: 'Reset to 20 demo organisations successfully!' });
-      setTimeout(() => setOrgFeedback(null), 3000);
-    }
-  };
-
-  const filteredOrganisations = useMemo(() => {
-    if (!orgSearch.trim()) return organisations;
-    const q = orgSearch.toLowerCase().trim();
-    return organisations.filter((org) => org.toLowerCase().includes(q));
-  }, [organisations, orgSearch]);
 
   // Filters, Search, Sort & Pagination
   const [filters, setFilters] = useState<FilterState>({
@@ -454,50 +347,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentLang }) =
         </div>
       </div>
 
-      {/* Navigation Tabs Switcher */}
+      {/* Submissions toolbar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
-        <div className="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200/80 w-full sm:w-auto">
-          <button
-            onClick={() => setActiveTab('submissions')}
-            className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
-              activeTab === 'submissions'
-                ? 'bg-white text-slate-900 shadow-xs border border-slate-200/70 font-bold'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Users className="w-4 h-4 text-slate-500" />
-            <span>{t.tabSubmissions}</span>
-            <span
-              className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                activeTab === 'submissions'
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-slate-200 text-slate-600'
-              }`}
-            >
-              {submissions.length}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('organisations')}
-            className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
-              activeTab === 'organisations'
-                ? 'bg-white text-slate-900 shadow-xs border border-slate-200/70 font-bold'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Building2 className="w-4 h-4 text-slate-500" />
-            <span>{t.tabOrganisations}</span>
-            <span
-              className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                activeTab === 'organisations'
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-slate-200 text-slate-600'
-              }`}
-            >
-              {organisations.length}
-            </span>
-          </button>
+        <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200/80 text-xs sm:text-sm font-semibold text-slate-800">
+          <Users className="w-4 h-4 text-slate-500" />
+          <span>{t.tabSubmissions}</span>
+          <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-900 text-white">
+            {submissions.length}
+          </span>
         </div>
 
         <button
@@ -511,205 +368,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentLang }) =
         </button>
       </div>
 
-      {activeTab === 'organisations' ? (
-        /* ========================================================================= */
-        /* ORGANISATIONS MANAGEMENT VIEW                                             */
-        /* ========================================================================= */
-        <div className="space-y-6">
-          {/* Add Organisation Card */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-              <div>
-                <h2 className="text-base sm:text-lg font-bold text-slate-900">
-                  {t.manageOrganisations}
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Organisations added here dynamically update the public confirmation form dropdown.
-                </p>
-              </div>
-              <span className="self-start sm:self-auto px-3 py-1 rounded-full bg-slate-100 text-slate-700 font-bold text-xs border border-slate-200">
-                {t.organisationsCount(organisations.length)}
-              </span>
-            </div>
-
-            <form onSubmit={handleAddOrg} className="flex flex-col sm:flex-row gap-2.5">
-              <input
-                type="text"
-                value={newOrgName}
-                onChange={(e) => setNewOrgName(e.target.value)}
-                placeholder={t.addOrganisationPlaceholder}
-                className="flex-1 h-11 px-4 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 text-sm bg-white transition-all"
-              />
-              <button
-                type="submit"
-                disabled={!newOrgName.trim()}
-                className="h-11 inline-flex items-center justify-center gap-1.5 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-semibold text-xs sm:text-sm shadow-xs transition-all flex-shrink-0 active:scale-95"
-              >
-                <Plus className="w-4 h-4" />
-                <span>{t.addOrganisationButton}</span>
-              </button>
-            </form>
-
-            {orgFeedback && (
-              <div
-                className={`mt-3 p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${
-                  orgFeedback.type === 'success'
-                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                    : 'bg-rose-50 text-rose-800 border border-rose-200'
-                }`}
-              >
-                {orgFeedback.type === 'success' ? (
-                  <Check className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                ) : (
-                  <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
-                )}
-                <span>{orgFeedback.message}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Clean Directory Table */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-            {/* Toolbar */}
-            <div className="p-4 sm:p-5 border-b border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-              <div className="relative flex-1 max-w-full sm:max-w-md">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="text"
-                  value={orgSearch}
-                  onChange={(e) => setOrgSearch(e.target.value)}
-                  placeholder={t.searchOrganisationsPlaceholder}
-                  className="w-full h-10 pl-9 pr-8 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 text-xs sm:text-sm bg-white"
-                />
-                {orgSearch && (
-                  <button
-                    onClick={() => setOrgSearch('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
-                    title="Clear search"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-
-              <div className="flex items-center gap-3 justify-between sm:justify-end">
-                <span className="text-xs text-slate-500 font-medium">
-                  Showing {filteredOrganisations.length} of {organisations.length}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleResetDemoOrgs}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs transition-colors active:scale-95"
-                  title="Reset to 20 default demo organisations"
-                >
-                  <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
-                  <span>{t.resetDemoOrganisations}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Structured Table */}
-            {filteredOrganisations.length === 0 ? (
-              <div className="py-12 px-4 text-center">
-                <div className="text-slate-500 text-sm font-semibold">{t.noOrganisationsFound}</div>
-                {orgSearch && (
-                  <button
-                    onClick={() => setOrgSearch('')}
-                    className="mt-2 text-xs font-bold text-slate-900 hover:underline"
-                  >
-                    Clear search filter
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {filteredOrganisations.map((org, index) => {
-                  const isEditing = editingOrg === org;
-                  return (
-                    <div
-                      key={org}
-                      className="px-5 py-3 flex items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors"
-                    >
-                      {isEditing ? (
-                        <div className="flex items-center gap-2 w-full">
-                          <span className="text-xs font-mono font-bold text-slate-400 w-6 flex-shrink-0">
-                            {index + 1}
-                          </span>
-                          <input
-                            type="text"
-                            value={editingOrgValue}
-                            onChange={(e) => setEditingOrgValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleSaveEditOrg(org);
-                              } else if (e.key === 'Escape') {
-                                handleCancelEditOrg();
-                              }
-                            }}
-                            autoFocus
-                            className="flex-1 h-9 px-3 rounded-lg border border-slate-400 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 bg-white"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleSaveEditOrg(org)}
-                            className="h-9 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors"
-                            title="Save changes (Enter)"
-                          >
-                            Save
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleCancelEditOrg}
-                            className="h-9 px-3 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-600 text-xs font-semibold transition-colors"
-                            title="Cancel (Esc)"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <span className="text-xs font-mono font-bold text-slate-400 w-6 flex-shrink-0">
-                              {index + 1}
-                            </span>
-                            <span className="text-sm font-semibold text-slate-800 truncate" title={org}>
-                              {org}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => handleStartEditOrg(org)}
-                              className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs font-medium transition-colors"
-                              title={`Edit "${org}"`}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteOrg(org)}
-                              className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-rose-200 hover:bg-rose-50 text-slate-600 hover:text-rose-700 text-xs font-medium transition-colors"
-                              title={`Delete "${org}"`}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        /* ========================================================================= */
-        /* SUBMISSIONS MANAGEMENT VIEW                                               */
-        /* ========================================================================= */
-        <>
+      <>
           {/* Database Error Banner */}
           {dataError && (
             <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 text-xs text-rose-900 flex items-center justify-between gap-3">
@@ -1241,7 +900,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentLang }) =
             </div>
           </div>
         </>
-      )}
+
 
       {/* Custom Delete Confirmation Modal */}
       {submissionToDelete && (

@@ -1,19 +1,14 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef } from 'react';
 import { FormValues, FormErrors, Language, GuestDetails } from '../types';
 import { translations } from '../i18n/translations';
 import { submitResponse } from '../services/supabase';
-import { getOrganisations } from '../services/organisations';
 import { RecaptchaWidget, RecaptchaWidgetRef } from './RecaptchaWidget';
 import {
   CheckCircle2,
   AlertCircle,
   ChevronDown,
-  ChevronUp,
   Users,
   RotateCcw,
-  Search,
-  X,
-  Check,
 } from 'lucide-react';
 
 interface PublicFormProps {
@@ -55,74 +50,6 @@ export const PublicForm: React.FC<PublicFormProps> = ({ currentLang }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  // Dynamic Organisations list
-  const [organisationsList, setOrganisationsList] = useState<string[]>(() => getOrganisations());
-
-  useEffect(() => {
-    const handleUpdate = () => {
-      setOrganisationsList(getOrganisations());
-    };
-    window.addEventListener('organisations-updated', handleUpdate);
-    window.addEventListener('storage', handleUpdate);
-    return () => {
-      window.removeEventListener('organisations-updated', handleUpdate);
-      window.removeEventListener('storage', handleUpdate);
-    };
-  }, []);
-
-  // Organisation selection state: '', preset name, or 'other'
-  const [organisationOption, setOrganisationOption] = useState<string>('');
-  const [customOrganisation, setCustomOrganisation] = useState<string>('');
-  const [isOrgDropdownOpen, setIsOrgDropdownOpen] = useState(false);
-  const [orgSearchQuery, setOrgSearchQuery] = useState('');
-  const orgDropdownRef = useRef<HTMLDivElement>(null);
-  const orgSearchInputRef = useRef<HTMLInputElement>(null);
-
-  // Close dropdown on click outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (orgDropdownRef.current && !orgDropdownRef.current.contains(event.target as Node)) {
-        setIsOrgDropdownOpen(false);
-      }
-    };
-    if (isOrgDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOrgDropdownOpen]);
-
-  // Filtered organisations based on user search query
-  const filteredOrganisations = useMemo(() => {
-    if (!orgSearchQuery.trim()) return organisationsList;
-    const q = orgSearchQuery.toLowerCase().trim();
-    return organisationsList.filter((org) => org.toLowerCase().includes(q));
-  }, [organisationsList, orgSearchQuery]);
-
-  const toggleOrgDropdown = () => {
-    setIsOrgDropdownOpen((prev) => {
-      const next = !prev;
-      if (next) {
-        setOrgSearchQuery('');
-        setTimeout(() => orgSearchInputRef.current?.focus(), 60);
-      }
-      return next;
-    });
-  };
-
-  const handleSelectOrganisation = (org: string) => {
-    handleOrganisationChange(org);
-    setIsOrgDropdownOpen(false);
-    setOrgSearchQuery('');
-  };
-
-  const handleSelectOther = () => {
-    handleOrganisationChange('other');
-    setIsOrgDropdownOpen(false);
-    setOrgSearchQuery('');
-  };
-
   // Accompany Guest selection state: '', '1', '2', '3', '4', '5', 'custom'
   const [guestOption, setGuestOption] = useState<string>('');
   const [customGuestCount, setCustomGuestCount] = useState<string>('');
@@ -139,16 +66,8 @@ export const PublicForm: React.FC<PublicFormProps> = ({ currentLang }) => {
       newErrors.name = t.valNameRequired;
     }
 
-    if (!organisationOption) {
+    if (!values.organisation.trim()) {
       newErrors.organisation = t.valOrganisationRequired;
-    } else if (organisationOption === 'other') {
-      if (!customOrganisation.trim()) {
-        newErrors.organisation = t.valOrganisationOtherRequired;
-      }
-    } else {
-      if (!values.organisation.trim()) {
-        newErrors.organisation = t.valOrganisationRequired;
-      }
     }
 
     if (!values.job_title.trim()) {
@@ -217,29 +136,6 @@ export const PublicForm: React.FC<PublicFormProps> = ({ currentLang }) => {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
-
-  // Handles organisation dropdown selection
-  const handleOrganisationChange = (selected: string) => {
-    setOrganisationOption(selected);
-    if (selected === 'other') {
-      setValues((prev) => ({ ...prev, organisation: customOrganisation.trim() }));
-    } else {
-      setCustomOrganisation('');
-      setValues((prev) => ({ ...prev, organisation: selected }));
-    }
-    if (errors.organisation) {
-      setErrors((prev) => ({ ...prev, organisation: undefined }));
-    }
-  };
-
-  // Handles custom organisation text input when "Others" is chosen
-  const handleCustomOrganisationChange = (val: string) => {
-    setCustomOrganisation(val);
-    setValues((prev) => ({ ...prev, organisation: val }));
-    if (errors.organisation) {
-      setErrors((prev) => ({ ...prev, organisation: undefined }));
-    }
   };
 
   // Handles attendance dropdown selection
@@ -418,10 +314,6 @@ export const PublicForm: React.FC<PublicFormProps> = ({ currentLang }) => {
       if (res.success) {
         setIsSubmitted(true);
         setValues(INITIAL_VALUES);
-        setOrganisationOption('');
-        setCustomOrganisation('');
-        setIsOrgDropdownOpen(false);
-        setOrgSearchQuery('');
         setGuestOption('');
         setCustomGuestCount('');
         setRecaptchaToken(null);
@@ -444,10 +336,6 @@ export const PublicForm: React.FC<PublicFormProps> = ({ currentLang }) => {
   const handleClear = () => {
     if (window.confirm(t.clearConfirm)) {
       setValues(INITIAL_VALUES);
-      setOrganisationOption('');
-      setCustomOrganisation('');
-      setIsOrgDropdownOpen(false);
-      setOrgSearchQuery('');
       setGuestOption('');
       setCustomGuestCount('');
       setErrors({});
@@ -484,7 +372,7 @@ export const PublicForm: React.FC<PublicFormProps> = ({ currentLang }) => {
               <CheckCircle2 className="w-10 h-10" />
             </div>
 
-            <h1 className="text-[26px] sm:text-[32px] font-extrabold text-[#3B1F0E] leading-tight mb-2">
+            <h1 className="uae-flag-text text-[26px] sm:text-[30px] font-extrabold leading-snug mb-2">
               {t.formTitle}
             </h1>
 
@@ -543,7 +431,7 @@ export const PublicForm: React.FC<PublicFormProps> = ({ currentLang }) => {
             {/* Header Area */}
             <div>
               {/* Title */}
-              <h1 className="text-[26px] sm:text-[32px] font-extrabold text-[#3B1F0E] leading-tight mb-2">
+              <h1 className="uae-flag-text text-[26px] sm:text-[30px] font-extrabold leading-snug mb-2">
                 {t.formTitle}
               </h1>
 
@@ -593,170 +481,28 @@ export const PublicForm: React.FC<PublicFormProps> = ({ currentLang }) => {
             </div>
 
             {/* Field 2: Organisation Name */}
-            <div ref={orgDropdownRef} className="relative">
-              <label className="block text-[14px] sm:text-[15px] font-semibold text-[#3B1F0E] mb-2">
+            <div>
+              <label htmlFor="organisation-input" className="block text-[14px] sm:text-[15px] font-semibold text-[#3B1F0E] mb-2">
                 {t.organisationLabel} <span className="text-[#9A4A1B] font-bold">*</span>
               </label>
-
-              {/* Select Trigger */}
-              <div className={`relative ${isOrgDropdownOpen ? 'z-30' : 'z-auto'}`}>
-                <button
-                  type="button"
-                  onClick={toggleOrgDropdown}
-                  aria-haspopup="listbox"
-                  aria-expanded={isOrgDropdownOpen}
-                  className={`w-full h-[52px] rounded-[14px] bg-white/80 border ${
-                    errors.organisation
-                      ? 'border-rose-400 bg-white ring-4 ring-rose-200/50'
-                      : isOrgDropdownOpen
-                      ? 'border-[#C8622A] bg-white ring-4 ring-[#F4B968]/40'
-                      : 'border-[#9A4A1B]/20 hover:border-[#9A4A1B]/40'
-                  } px-[18px] text-[15px] text-left flex items-center justify-between transition-all outline-none shadow-xs`}
-                >
-                  <span
-                    className={`truncate pr-2 ${
-                      organisationOption ? 'text-[#3B1F0E] font-medium' : 'text-[#7A5A44]/60'
-                    }`}
-                  >
-                    {organisationOption === 'other'
-                      ? t.organisationOtherOption
-                      : organisationOption || t.organisationSelectPlaceholder}
-                  </span>
-
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    {organisationOption && (
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOrganisationChange('');
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.stopPropagation();
-                            handleOrganisationChange('');
-                          }
-                        }}
-                        className="p-1 rounded-md text-[#7A5A44] hover:text-[#3B1F0E] hover:bg-slate-100 transition-colors"
-                        title="Clear selection"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </span>
-                    )}
-                    {isOrgDropdownOpen ? (
-                      <ChevronUp className="w-4 h-4 text-[#C8622A]" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-[#7A5A44]" />
-                    )}
-                  </div>
-                </button>
-
-                {/* Dropdown Menu */}
-                {isOrgDropdownOpen && (
-                  <div className="absolute left-0 right-0 top-full mt-2 bg-white/95 backdrop-blur-xl border border-white/80 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in-50 zoom-in-95 duration-150">
-                    <div className="p-3 border-b border-slate-100 bg-amber-50/40">
-                      <div className="relative">
-                        <Search className="w-4 h-4 text-[#7A5A44] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        <input
-                          ref={orgSearchInputRef}
-                          type="text"
-                          value={orgSearchQuery}
-                          onChange={(e) => setOrgSearchQuery(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Escape') {
-                              setIsOrgDropdownOpen(false);
-                            }
-                          }}
-                          placeholder={t.searchOrganisationsPlaceholder}
-                          className="w-full h-11 pl-10 pr-9 rounded-xl border border-slate-200 bg-white text-sm text-[#3B1F0E] placeholder:text-[#7A5A44]/60 focus:outline-none focus:border-[#C8622A] focus:ring-2 focus:ring-[#F4B968]/40"
-                        />
-                        {orgSearchQuery && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setOrgSearchQuery('');
-                              orgSearchInputRef.current?.focus();
-                            }}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-[#7A5A44] hover:text-[#3B1F0E] rounded"
-                            title="Clear search"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="max-h-60 overflow-y-auto p-1.5 space-y-0.5">
-                      {filteredOrganisations.length > 0 ? (
-                        filteredOrganisations.map((org) => {
-                          const isSelected = organisationOption === org;
-                          return (
-                            <button
-                              key={org}
-                              type="button"
-                              onClick={() => handleSelectOrganisation(org)}
-                              className={`w-full px-3.5 py-2.5 text-left rounded-xl text-sm font-medium transition-colors flex items-center justify-between ${
-                                isSelected
-                                  ? 'bg-[#FCE8D3] text-[#9A4A1B] font-bold'
-                                  : 'text-[#3B1F0E] hover:bg-amber-500/10'
-                              }`}
-                            >
-                              <span className="truncate">{org}</span>
-                              {isSelected && <Check className="w-4 h-4 text-[#9A4A1B] flex-shrink-0" />}
-                            </button>
-                          );
-                        })
-                      ) : (
-                        <div className="py-6 px-3 text-center">
-                          <p className="text-xs text-[#7A5A44] font-medium">
-                            {t.noOrganisationsFound}
-                          </p>
-                        </div>
-                      )}
-
-                      <div className="pt-1 mt-1 border-t border-slate-100">
-                        <button
-                          type="button"
-                          onClick={handleSelectOther}
-                          className={`w-full px-3.5 py-2.5 text-left rounded-xl text-sm font-semibold transition-colors flex items-center justify-between ${
-                            organisationOption === 'other'
-                              ? 'bg-[#FCE8D3] text-[#9A4A1B] font-bold'
-                              : 'text-[#9A4A1B] hover:bg-amber-500/10'
-                          }`}
-                        >
-                          <span className="flex items-center gap-2 truncate">
-                            <span>{t.organisationOtherOption}</span>
-                            <span className="text-[11px] font-normal text-slate-400">(specify manually)</span>
-                          </span>
-                          {organisationOption === 'other' && (
-                            <Check className="w-4 h-4 text-[#9A4A1B] flex-shrink-0" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {organisationOption === 'other' && (
-                <div className="mt-3 animate-in fade-in duration-200">
-                  <label htmlFor="custom-organisation-input" className="block text-xs font-semibold text-[#7A5A44] mb-1.5">
-                    {t.organisationOtherPlaceholder} <span className="text-[#9A4A1B] font-bold">*</span>
-                  </label>
-                  <input
-                    id="custom-organisation-input"
-                    type="text"
-                    value={customOrganisation}
-                    onChange={(e) => handleCustomOrganisationChange(e.target.value)}
-                    placeholder={t.organisationPlaceholder}
-                    className="w-full h-[52px] rounded-[14px] bg-white/80 border border-[#9A4A1B]/20 hover:border-[#9A4A1B]/40 focus:border-[#C8622A] focus:bg-white focus:ring-4 focus:ring-[#F4B968]/40 px-[18px] text-[15px] text-[#3B1F0E] placeholder:text-[#7A5A44]/60 transition-all outline-none shadow-xs"
-                    autoFocus
-                    aria-required="true"
-                  />
-                </div>
-              )}
-
+              <input
+                id="organisation-input"
+                type="text"
+                value={values.organisation}
+                onChange={(e) => {
+                  setValues({ ...values, organisation: e.target.value });
+                  if (errors.organisation) setErrors({ ...errors, organisation: undefined });
+                }}
+                placeholder={t.organisationPlaceholder}
+                className={`w-full h-[52px] rounded-[14px] bg-white/80 border ${
+                  errors.organisation
+                    ? 'border-rose-400 bg-white ring-4 ring-rose-200/50'
+                    : 'border-[#9A4A1B]/20 hover:border-[#9A4A1B]/40 focus:border-[#C8622A] focus:bg-white focus:ring-4 focus:ring-[#F4B968]/40'
+                } px-[18px] text-[15px] text-[#3B1F0E] placeholder:text-[#7A5A44]/60 transition-all outline-none shadow-xs`}
+                aria-required="true"
+                aria-invalid={Boolean(errors.organisation)}
+                aria-describedby={errors.organisation ? 'organisation-error' : undefined}
+              />
               {errors.organisation && (
                 <p id="organisation-error" className="mt-1.5 text-xs font-semibold text-rose-600 flex items-center gap-1.5">
                   <AlertCircle className="w-3.5 h-3.5" />
@@ -1043,29 +789,27 @@ export const PublicForm: React.FC<PublicFormProps> = ({ currentLang }) => {
               </div>
             )}
 
-            {/* reCAPTCHA glass panel */}
-            <div className="rounded-2xl bg-white/70 backdrop-blur-md border border-white/80 p-3 sm:p-4 shadow-xs">
-              <RecaptchaWidget
-                ref={recaptchaRef}
-                currentLang={currentLang}
-                onSuccess={(token) => {
-                  setRecaptchaToken(token);
-                  if (errors.recaptcha) {
-                    setErrors((prev) => ({ ...prev, recaptcha: undefined }));
-                  }
-                }}
-                onExpire={() => {
-                  setRecaptchaToken(null);
-                  setErrors((prev) => ({ ...prev, recaptcha: t.valRecaptchaExpired }));
-                }}
-                onError={() => {
-                  setRecaptchaToken(null);
-                  setErrors((prev) => ({ ...prev, recaptcha: t.valRecaptchaFailed }));
-                }}
-                hasError={Boolean(errors.recaptcha)}
-                errorMessage={errors.recaptcha}
-              />
-            </div>
+            {/* reCAPTCHA */}
+            <RecaptchaWidget
+              ref={recaptchaRef}
+              currentLang={currentLang}
+              onSuccess={(token) => {
+                setRecaptchaToken(token);
+                if (errors.recaptcha) {
+                  setErrors((prev) => ({ ...prev, recaptcha: undefined }));
+                }
+              }}
+              onExpire={() => {
+                setRecaptchaToken(null);
+                setErrors((prev) => ({ ...prev, recaptcha: t.valRecaptchaExpired }));
+              }}
+              onError={() => {
+                setRecaptchaToken(null);
+                setErrors((prev) => ({ ...prev, recaptcha: t.valRecaptchaFailed }));
+              }}
+              hasError={Boolean(errors.recaptcha)}
+              errorMessage={errors.recaptcha}
+            />
 
             {/* Submit & Clear Action Buttons */}
             <div className="flex items-center justify-between pt-2">

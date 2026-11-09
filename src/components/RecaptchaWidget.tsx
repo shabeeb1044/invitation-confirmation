@@ -140,22 +140,19 @@ export const RecaptchaWidget = forwardRef<RecaptchaWidgetRef, RecaptchaWidgetPro
 
     return (
       <div className="space-y-2">
-        <div
-          className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all bg-white min-h-[86px] overflow-hidden ${
-            hasError || loadError
-              ? 'border-rose-400 ring-2 ring-rose-100'
-              : 'border-slate-200 hover:border-slate-300'
-          }`}
-        >
-          {loadError ? (
-            <div className="flex items-center gap-2 text-rose-600 text-xs py-2 px-3 font-medium">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span>{loadError}</span>
-            </div>
-          ) : (
-            <div ref={containerRef} className="recaptcha-container my-1" />
-          )}
-        </div>
+        {loadError ? (
+          <div className="flex items-center gap-2 text-rose-600 text-xs font-medium">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>{loadError}</span>
+          </div>
+        ) : (
+          <div
+            ref={containerRef}
+            className={`recaptcha-container inline-block rounded ${
+              hasError ? 'ring-2 ring-rose-400 ring-offset-2 ring-offset-transparent' : ''
+            }`}
+          />
+        )}
 
         {hasError && errorMessage && !loadError && (
           <div className="flex items-center gap-1.5 text-xs text-rose-600 font-medium">

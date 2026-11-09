@@ -8,6 +8,24 @@
   }
 }
 
+/* UAE flag color pattern on text — red | green | black */
+.uae-flag-text {
+  background-image: linear-gradient(
+    90deg,
+    #ff0000 0%,
+    #ff0000 28%,
+    #00732f 42%,
+    #00732f 68%,
+    #000000 82%,
+    #000000 100%
+  );
+  background-size: 100% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
 /* Responsive National Day Background for Public Form Page */
 .form-page-bg {
   background-image: url('/national-day-bg.jpg');

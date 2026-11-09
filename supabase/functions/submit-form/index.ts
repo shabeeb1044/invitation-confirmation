@@ -21,7 +21,19 @@ serve(async (req: Request) => {
 
   try {
     const payload = await req.json();
-    const { turnstileToken, name, email, job_title, join, comments, locale } = payload;
+    const {
+      turnstileToken,
+      name,
+      email,
+      organisation,
+      job_title,
+      join,
+      comments,
+      locale,
+      has_guest,
+      guest_count,
+      guests,
+    } = payload;
 
     // 1. Missing Token Check
     if (!turnstileToken) {
@@ -107,20 +119,59 @@ serve(async (req: Request) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data, error } = await supabase
+    if (!name || !organisation || !job_title || !join) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Required fields are missing" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const insertPayload: Record<string, unknown> = {
+      name: String(name).trim(),
+      email: String(email || "").trim(),
+      organisation: String(organisation || "").trim(),
+      job_title: String(job_title).trim(),
+      join: Array.isArray(join) ? join : [join],
+      has_guest: Boolean(has_guest),
+      guest_count: Number(guest_count || 0),
+      guests: Array.isArray(guests)
+        ? guests.map((g: { name?: string; organisation?: string; job_title?: string }) => ({
+            name: String(g?.name || "").trim(),
+            organisation: String(g?.organisation || "").trim(),
+            job_title: String(g?.job_title || "").trim(),
+          }))
+        : [],
+      comments: comments ? Number(comments) : null,
+      locale: locale || "en",
+    };
+
+    let { data, error } = await supabase
       .from("invitation_submissions")
-      .insert([
-        {
-          name: String(name).trim(),
-          email: String(email).trim(),
-          job_title: String(job_title).trim(),
-          join: Array.isArray(join) ? join : [join],
-          comments: comments ? Number(comments) : null,
-          locale: locale || "en",
-        },
-      ])
+      .insert([insertPayload])
       .select("id")
       .single();
+
+    // Retry only for optional guest columns — never drop organisation
+    while (error && error.message) {
+      let changed = false;
+      if (error.message.includes("guests")) {
+        delete insertPayload.guests;
+        changed = true;
+      }
+      if (error.message.includes("has_guest") || error.message.includes("guest_count")) {
+        delete insertPayload.has_guest;
+        delete insertPayload.guest_count;
+        changed = true;
+      }
+      if (!changed) break;
+      const retry = await supabase
+        .from("invitation_submissions")
+        .insert([insertPayload])
+        .select("id")
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       console.error("Database insert error:", error);

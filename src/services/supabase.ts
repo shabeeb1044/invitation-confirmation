@@ -281,15 +281,11 @@ export async function submitResponse(
         .from('invitation_submissions')
         .insert([payload]);
 
-      // Graceful fallback retry if any newly added columns do not exist in SQL schema yet
+      // Retry only for optional guest/email columns — never drop organisation
       while (error && error.message) {
         let changed = false;
         if (error.message.includes('guests')) {
           delete payload.guests;
-          changed = true;
-        }
-        if (error.message.includes('organisation')) {
-          delete payload.organisation;
           changed = true;
         }
         if (error.message.includes('has_guest') || error.message.includes('guest_count')) {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Language } from '../types';
 import { translations } from '../i18n/translations';
-import { Calendar, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 interface HeaderProps {
   currentLang?: Language;
@@ -9,6 +9,21 @@ interface HeaderProps {
   view: 'form' | 'admin';
   onViewChange: (view: 'form' | 'admin') => void;
 }
+
+/** Exact UAE flag — original 1:2 proportions, wider mark */
+const UaeFlagMark: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <div
+    className={`relative h-8 w-14 sm:h-9 sm:w-16 overflow-hidden shadow-md shadow-black/15 ring-1 ring-black/10 group-hover:scale-105 transition-transform flex-shrink-0 ${className}`}
+    aria-hidden="true"
+  >
+    <img
+      src="/uae-flag.png"
+      alt=""
+      className="absolute inset-0 w-full h-full object-fill"
+      draggable={false}
+    />
+  </div>
+);
 
 export const Header: React.FC<HeaderProps> = ({
   currentLang = 'en',
@@ -31,12 +46,10 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={() => onViewChange('form')} 
           className="flex items-center gap-3 cursor-pointer group"
         >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#B44B1E] via-[#C85D26] to-[#DB7332] flex items-center justify-center text-white shadow-md shadow-[#C85D26]/25 group-hover:scale-105 transition-transform flex-shrink-0">
-            <Calendar className="w-5 h-5" />
-          </div>
+          <UaeFlagMark />
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-bold text-[#2C1A0E] text-sm sm:text-base tracking-tight">
+              <span className="uae-flag-text font-bold text-sm sm:text-base tracking-tight">
                 National Day 2026
               </span>
               <span className="hidden sm:inline-block text-[11px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-[#FCE8D3] text-[#A14718] border border-[#F3CCA5]">
