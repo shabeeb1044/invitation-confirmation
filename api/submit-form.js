@@ -1,5 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 
+const ENGLISH_ONLY_REGEX = /^[A-Za-z0-9\s.,\-'&()/:+"!?@#%*;_]+$/;
+const isEnglishOnly = (val) => {
+  const trimmed = String(val || '').trim();
+  if (!trimmed) return true;
+  return ENGLISH_ONLY_REGEX.test(trimmed);
+};
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
@@ -10,6 +17,20 @@ export default async function handler(req, res) {
 
     if (!name || !organisation || !job_title || !join) {
       return res.status(400).json({ success: false, error: 'Required fields are missing' });
+    }
+
+    const guests = Array.isArray(req.body?.guests) ? req.body.guests : [];
+    const textValues = [
+      name,
+      organisation,
+      job_title,
+      ...guests.flatMap((g) => [g?.name, g?.organisation, g?.job_title]),
+    ];
+    if (textValues.some((v) => !isEnglishOnly(v))) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please enter all details in English characters only.',
+      });
     }
 
     // 1. Verify Google reCAPTCHA

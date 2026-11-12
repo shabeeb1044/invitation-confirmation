@@ -78,6 +78,7 @@ export interface Translations {
   valJoinRequired: string;
   valHasGuestRequired: string;
   valGuestCountRequired: string;
+  valEnglishOnly: string;
   valGeneralError: string;
   dbNotConfiguredError: string;
   
@@ -227,6 +228,7 @@ export const translations: Record<Language, Translations> = {
     valJoinRequired: "Please select your attendance status",
     valHasGuestRequired: "Please indicate if you will be accompanied by a guest",
     valGuestCountRequired: "Please select the number of guests",
+    valEnglishOnly: "Please enter in English characters only (switch keyboard to English).",
     valGeneralError: "An error occurred while submitting. Please try again.",
     dbNotConfiguredError: "Database service is not configured. Please contact the event administrator.",
 
@@ -374,6 +376,7 @@ export const translations: Record<Language, Translations> = {
     valJoinRequired: "Пожалуйста, укажите ваш статус присутствия",
     valHasGuestRequired: "Пожалуйста, укажите, придете ли вы с гостями",
     valGuestCountRequired: "Пожалуйста, выберите количество гостей",
+    valEnglishOnly: "Пожалуйста, используйте только английские символы (переключите раскладку на английский).",
     valGeneralError: "Произошла ошибка при отправке. Пожалуйста, попробуйте еще раз.",
     dbNotConfiguredError: "Служба базы данных не настроена. Пожалуйста, обратитесь к администратору.",
 

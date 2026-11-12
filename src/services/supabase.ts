@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { FormValues, Language, Submission } from '../types';
+import { isEnglishOnly } from '../utils/validation';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey =
@@ -200,6 +201,23 @@ export async function submitResponse(
   locale: Language,
   recaptchaToken?: string
 ): Promise<{ success: boolean; id: string; error?: string }> {
+  // Enforce English-only characters across all text inputs
+  const fieldsToValidate = [
+    values.name,
+    values.organisation,
+    values.job_title,
+    ...(Array.isArray(values.guests)
+      ? values.guests.flatMap((g) => [g.name, g.organisation, g.job_title])
+      : []),
+  ];
+  if (fieldsToValidate.some((v) => !isEnglishOnly(v || ''))) {
+    return {
+      success: false,
+      id: '',
+      error: 'Please enter all details in English characters only.',
+    };
+  }
+
   // 1. Try server endpoint /api/submit-form (verifies Google reCAPTCHA server-side)
   try {
     const response = await fetch('/api/submit-form', {
